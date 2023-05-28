@@ -4,13 +4,21 @@ ENV GO_VERSION 1.19
 
 RUN apt-get update \
     && apt-get install -y curl \
-    && apt-get install -y ca-certificates \
     && curl -SL https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz | tar -xzC /usr/local \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PATH /usr/local/go/bin:${PATH}
 
 WORKDIR /app
+
+# Set up environment variables
+ENV GO111MODULE=on
+ENV GOPATH=/root/go
+ENV DOCKER_BUILDKIT=1
+ENV PATH=$PATH:/app/bin:/app/tools/protoc-3.6.1/bin
+
+# Load API keys from secret files as environment variables
+RUN echo "source /app/scripts/load-keys.sh" >> /etc/profile
 
 COPY package*.json ./
 
@@ -23,6 +31,6 @@ RUN npm install
 COPY . .
 
 # Run source-me.sh and go-compile.sh
-RUN bash -c 'source ./scripts/source-me.sh && ./scripts/go-compile.sh ./vault-web-server'
+RUN bash -c './scripts/go-compile.sh ./vault-web-server'
 
-CMD ["npm", "start"]
+CMD ["./bin/vault-web-server"]
