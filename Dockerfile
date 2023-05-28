@@ -1,36 +1,40 @@
-FROM node:19-slim
+# Build stage
+FROM golang:1.19-bullseye AS go-builder
 
-ENV GO_VERSION 1.19
-
-RUN apt-get update \
-    && apt-get install -y curl \
-    && curl -SL https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz | tar -xzC /usr/local \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV PATH /usr/local/go/bin:${PATH}
-
-WORKDIR /app
-
+# Set the working directory
+WORKDIR /build
 # Set up environment variables
 ENV GO111MODULE=on
+ENV CGO_ENABLED=0
 ENV GOPATH=/root/go
 ENV DOCKER_BUILDKIT=1
 ENV PATH=$PATH:/app/bin:/app/tools/protoc-3.6.1/bin
 
-# Load API keys from secret files as environment variables
-RUN echo "source /app/scripts/load-keys.sh" >> /etc/profile
-
-COPY package*.json ./
-
-# Install a specific version of npm
-RUN npm install -g npm@9.6.7
-
-RUN npm install
-
-# Copy the entire application
+# Copy files
 COPY . .
 
-# Run source-me.sh and go-compile.sh
-RUN bash -c './scripts/go-compile.sh ./vault-web-server'
+# Download and build Go dependencies, then compile the binary
+RUN go mod download && \
+    go build -o bin/vault-web-server ./vault-web-server
 
+# Runtime stage
+FROM debian:bookworm-slim
+
+# Copy the compiled vault-web-server binary from the build stage
+COPY --from=go-builder /build/bin/vault-web-server /app/bin/vault-web-server
+
+# Copy the app directory
+COPY . /app
+
+# Set the working directory
+WORKDIR /app
+
+ENV OPENAI_API_KEY="$(cat /app/secret/openai_api_key)"
+ENV PINECONE_API_KEY="$(cat /app/secret/pinecone_api_key)"
+ENV PINECONE_API_ENDPOINT="$(cat /app/secret/pinecone_api_endpoint)"
+
+# Expose port 8100
+EXPOSE 8100
+
+# Execute the vault-web-server binary
 CMD ["./bin/vault-web-server"]

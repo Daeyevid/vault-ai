@@ -6,8 +6,8 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'gcr.io/$PROJECT_ID/vault-ai']
 # Deploy the new image to Cloud Run
-- name: 'gcr.io/cloud-builders/gcloud'
-  args: ['run', 'deploy', 'vault-ai', '--image', 'gcr.io/$PROJECT_ID/vault-ai', '--region', 'us-central1', '--platform', 'managed', '--allow-unauthenticated']
+# - name: 'gcr.io/cloud-builders/gcloud'
+#  args: ['run', 'deploy', 'vault-ai', '--image', 'gcr.io/$PROJECT_ID/vault-ai', '--region', 'us-central1', '--platform', 'managed', '--allow-unauthenticated']
 
 images:
 - 'gcr.io/$PROJECT_ID/vault-ai'
